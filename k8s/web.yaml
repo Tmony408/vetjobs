@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: vetjobs
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: vetjobs-web:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PORT
+              value: "3000"
+            # When the frontend is wired to the API, point it at the in-cluster service:
+            - name: NEXT_PUBLIC_API_URL
+              value: "http://api:4000/api"
+          ports:
+            - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: vetjobs
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 3000
+      targetPort: 3000

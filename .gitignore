@@ -1,0 +1,19 @@
+# dependencies / build output
+node_modules
+**/node_modules
+.next
+**/.next
+dist
+**/dist
+out
+**/out
+
+# env & secrets (never commit these)
+.env
+**/.env
+.env.local
+**/.env.local
+
+# misc
+.DS_Store
+*.log

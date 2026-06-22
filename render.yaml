@@ -1,0 +1,33 @@
+# Render Blueprint — deploys both services from this repo.
+# In Render: New + → Blueprint → connect this repo → Apply.
+services:
+  # --- Backend (NestJS) ---
+  - type: web
+    name: vetjobs-api
+    runtime: docker
+    dockerfilePath: ./vetjobs-api/Dockerfile
+    dockerContext: ./vetjobs-api
+    healthCheckPath: /api/jobs
+    envVars:
+      - key: DATABASE_URL
+        sync: false # paste your Neon connection string in the dashboard
+      - key: JWT_SECRET
+        generateValue: true # Render generates a strong secret
+      - key: CORS_ORIGIN
+        value: "*" # for testing; tighten to your web URL later
+      - key: LLM_API_KEY
+        sync: false # optional: paste your free Groq key
+      - key: LLM_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: LLM_MODEL
+        value: llama-3.3-70b-versatile
+
+  # --- Frontend (Next.js) ---
+  - type: web
+    name: vetjobs-web
+    runtime: docker
+    dockerfilePath: ./vetjobs-app/Dockerfile
+    dockerContext: ./vetjobs-app
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        sync: false # set to https://<your-api-url>.onrender.com/api  (then redeploy web)

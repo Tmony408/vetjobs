@@ -1,0 +1,16 @@
+# Spin up a local Postgres for development:  docker compose up -d
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vetjobs
+      POSTGRES_PASSWORD: vetjobs
+      POSTGRES_DB: vetjobs
+    ports:
+      - "5432:5432"
+    volumes:
+      - vetjobs_pgdata:/var/lib/postgresql/data
+
+volumes:
+  vetjobs_pgdata:
