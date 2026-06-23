@@ -18,4 +18,6 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 EXPOSE 3000
-CMD ["node", "server.js"]
+# Force Next's standalone server to listen on all interfaces, otherwise it binds to
+# the container hostname and Render's router can't reach it (→ 502).
+CMD ["sh", "-c", "HOSTNAME=0.0.0.0 node server.js"]
