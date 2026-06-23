@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useApp } from "../providers";
 import SignInCard from "@/components/SignInCard";
+import { api } from "@/lib/api";
 
 async function extractPdf(file) {
   if (!window.pdfjsLib) {
@@ -48,8 +49,23 @@ export default function ProfilePage() {
       else if (/\.txt$/i.test(file.name)) cvText = await file.text();
       else cvText = "[CV attached: " + file.name + ". DOCX parsing is a server-side step.]";
     } catch { cvText = "[Could not read " + file.name + " automatically]"; }
-    update((s) => ({ roles: s.roles.map((r) => (r.id === id ? { ...r, cvName: file.name, cvText } : r)) }));
-    flash("CV saved for this role ✓");
+    // Best-effort: also store the original file in S3. Skips silently if S3 isn't
+    // configured yet, so CV upload keeps working either way.
+    let cvUrl = "";
+    try {
+      const { uploadUrl, publicUrl } = await api.mediaUploadUrl({
+        fileName: file.name,
+        contentType: file.type || "application/octet-stream",
+      });
+      await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+      cvUrl = publicUrl;
+    } catch {}
+    update((s) => ({ roles: s.roles.map((r) => (r.id === id ? { ...r, cvName: file.name, cvText, cvUrl } : r)) }));
+    flash(cvUrl ? "CV uploaded to storage ✓" : "CV saved ✓");
   };
 
   const p = state.personal, a = state.answers;

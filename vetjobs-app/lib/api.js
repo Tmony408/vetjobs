@@ -43,4 +43,6 @@ export const api = {
   addApplication: (b) => req("/applications", { method: "POST", body: b }),
 
   coverLetter: (b) => req("/cover-letter", { method: "POST", body: b }),
+
+  mediaUploadUrl: (b) => req("/media/upload-url", { method: "POST", body: b }),
 };
