@@ -7,7 +7,7 @@ import { useApp } from "../providers";
 export default function LoginPage() {
   const app = useApp();
   const router = useRouter();
-  const [mode, setMode] = useState("login"); // 'login' | 'signup'
+  const [mode, setMode] = useState("signup"); // 'login' | 'signup'
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +22,7 @@ export default function LoginPage() {
     try {
       if (mode === "signup") await app.signup(email.trim(), password, name.trim());
       else await app.login(email.trim(), password);
-      router.push("/");
+      router.push("/jobs");
     } catch (e2) {
       setErr(e2.message || "Something went wrong. Is the API running?");
     } finally {
@@ -31,14 +31,25 @@ export default function LoginPage() {
   };
 
   return (
-    <>
-      <div className="page-head">
-        <h1>{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
-        <p>{mode === "signup" ? "Free to join — apply to verified jobs and track everything in one place." : "Sign in to apply for jobs and see your dashboard."}</p>
+    <div className="auth-split">
+      <div className="auth-panel">
+        <div className="auth-logo"><span className="logo">V</span> VetJobs</div>
+        <h2>Your job hunt,<br />protected.</h2>
+        <p>Join thousands of Nigerians finding verified jobs and auto-applying — without the scams.</p>
+        <ul className="auth-points">
+          <li>✅ Every job fraud-scored</li>
+          <li>⚡ Auto-apply with a tailored CV</li>
+          <li>🔍 Free scam checker</li>
+        </ul>
       </div>
 
-      <div style={{ maxWidth: 420 }}>
-        <form className="card" onSubmit={submit}>
+      <div className="auth-form">
+        <div className="auth-tabs">
+          <button className={mode === "signup" ? "on" : ""} onClick={() => { setMode("signup"); setErr(""); }}>Create account</button>
+          <button className={mode === "login" ? "on" : ""} onClick={() => { setMode("login"); setErr(""); }}>Sign in</button>
+        </div>
+
+        <form onSubmit={submit}>
           {mode === "signup" && (
             <>
               <label className="fld">Full name</label>
@@ -52,19 +63,13 @@ export default function LoginPage() {
 
           {err && <div className="banner bad" style={{ marginTop: 14 }}><span>⚠️</span><span>{err}</span></div>}
 
-          <div style={{ height: 14 }} />
+          <div style={{ height: 16 }} />
           <motion.button whileTap={{ scale: 0.98 }} className="btn brand" type="submit" disabled={busy}>
             {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
           </motion.button>
+          <button type="button" className="btn sec" style={{ marginTop: 10 }} disabled title="Coming soon">Continue with Google</button>
         </form>
-
-        <p className="small center" style={{ marginTop: 12 }}>
-          {mode === "signup" ? "Already have an account?" : "New to VetJobs?"}{" "}
-          <button onClick={() => { setMode(mode === "signup" ? "login" : "signup"); setErr(""); }} style={{ color: "var(--brand)", fontWeight: 600 }}>
-            {mode === "signup" ? "Sign in" : "Create one"}
-          </button>
-        </p>
       </div>
-    </>
+    </div>
   );
 }

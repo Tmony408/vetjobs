@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useApp } from "@/app/providers";
 
 const items = [
-  { href: "/", ic: "🛡️", l: "Find Jobs", s: "Jobs" },
+  { href: "/jobs", ic: "🛡️", l: "Find Jobs", s: "Jobs" },
   { href: "/verify", ic: "🔍", l: "Verify", s: "Verify" },
   { href: "/apply", ic: "⚡", l: "Auto-Apply", s: "Apply" },
   { href: "/stats", ic: "📊", l: "Stats", s: "Stats" },
@@ -21,10 +21,10 @@ export default function Shell({ children }) {
   return (
     <>
       <header className="topnav">
-        <div className="brand">
+        <Link href="/" className="brand">
           <span className="logo">V</span> VetJobs{" "}
           <small style={{ opacity: 0.55, fontWeight: 500, fontSize: 13 }}>NG</small>
-        </div>
+        </Link>
         <nav className="topnav-links">
           {items.map((it) => (
             <Link key={it.href} href={it.href} className={active(it.href) ? "on" : ""}>{it.l}</Link>

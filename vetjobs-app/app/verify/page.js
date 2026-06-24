@@ -49,10 +49,16 @@ export default function VerifyPage() {
                 {res.level === "verified" ? "✅ Verified" : res.level === "caution" ? "⚠️ Caution" : "⛔ High-risk"}
               </span>
             </div>
-            <div className="scorebar">
-              <motion.i style={{ background: color }} initial={{ width: 0 }} animate={{ width: res.score + "%" }} transition={{ duration: 0.9, ease: [0.2, 0.7, 0.3, 1] }} />
+            <div style={{ display: "flex", justifyContent: "center", margin: "10px 0 2px" }}>
+              <svg width="150" height="150" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="#eef0ef" strokeWidth="12" />
+                <motion.circle cx="60" cy="60" r="52" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
+                  strokeDasharray={327} initial={{ strokeDashoffset: 327 }} animate={{ strokeDashoffset: 327 - (327 * res.score) / 100 }}
+                  transition={{ duration: 1, ease: [0.2, 0.7, 0.3, 1] }} style={{ transform: "rotate(-90deg)", transformOrigin: "center" }} />
+                <text x="60" y="56" textAnchor="middle" fontSize="32" fontWeight="700" fill={color}>{res.score}</text>
+                <text x="60" y="78" textAnchor="middle" fontSize="10" fill="#7c7c8c">safety score</text>
+              </svg>
             </div>
-            <div className="small" style={{ marginTop: 4 }}>Safety score: {res.score}/100</div>
             <div className={`banner ${res.level === "verified" ? "ok" : res.level === "caution" ? "warn" : "bad"}`} style={{ marginTop: 12 }}>
               <span>{res.level === "risk" ? "⛔" : res.level === "caution" ? "⚠️" : "✅"}</span>
               <span>
