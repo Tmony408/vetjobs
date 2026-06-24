@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useApp } from "../providers";
@@ -13,6 +13,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Already signed in? Don't show the login page — send them into the app.
+  useEffect(() => { if (app?.user) router.replace("/jobs"); }, [app?.user, router]);
 
   const submit = async (e) => {
     e?.preventDefault();
@@ -41,6 +44,7 @@ export default function LoginPage() {
           <li>⚡ Auto-apply with a tailored CV</li>
           <li>🔍 Free scam checker</li>
         </ul>
+        <div className="auth-art"><img src="/images/auth.jpg" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
       </div>
 
       <div className="auth-form">

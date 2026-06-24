@@ -19,14 +19,16 @@ export default function ApplyPage() {
   const { state, update, jobs, hasAccess, readyRoles, reloadApplications } = app;
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 2200); };
 
-  const verified = jobs.filter((j) => j.v.level === "verified");
-  const matched = verified.filter((j) => { const r = matchRoleToJob(j, state.roles); return r && r.cvName; });
+  // Apply to every non-scam job that matches a role (Verified + Caution) — not just "Verified",
+  // since most live listings have no company-registry check and score as Caution.
+  const eligible = jobs.filter((j) => j.v.level !== "risk");
+  const matched = eligible.filter((j) => { const r = matchRoleToJob(j, state.roles); return r && r.cvName; });
   const appliedJobs = state.applications;
-  const skipped = verified.length - matched.length;
+  const skipped = eligible.length - matched.length;
 
   const runAutoApply = async () => {
     const todo = [];
-    verified.forEach((j) => {
+    eligible.forEach((j) => {
       if (state.applications.some((a) => a.jobId === j.id)) return;
       const role = matchRoleToJob(j, state.roles);
       if (role && role.cvName) todo.push({ job: j, role });

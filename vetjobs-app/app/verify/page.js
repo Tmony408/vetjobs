@@ -83,6 +83,7 @@ export default function VerifyPage() {
       </AnimatePresence>
         </div>
         <aside className="info-card">
+          <div className="verify-art"><img src="/images/verify.jpg" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} /></div>
           <h4>How we spot scams</h4>
           <div className="ic-row"><span className="t">✓</span> Demands for fees, BVN, ATM or OTP before a job</div>
           <div className="ic-row"><span className="t">✓</span> Personal Gmail/Yahoo instead of a company email</div>

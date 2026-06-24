@@ -21,7 +21,9 @@ export default function Landing() {
             <div><b>1-tap</b><span>apply to verified jobs</span></div>
           </div>
         </div>
-        <div className="lp-hero-art">🛡️</div>
+        <div className="lp-hero-art">
+          <img src="/images/hero.jpg" alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        </div>
       </motion.section>
 
       <div className="lp-features">
