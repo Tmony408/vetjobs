@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../providers";
 import SignInCard from "@/components/SignInCard";
 import { matchRoleToJob, genLetter, filledForm } from "@/lib/match";
+import { api } from "@/lib/api";
 
 export default function ApplyPage() {
   const app = useApp();
@@ -15,28 +16,44 @@ export default function ApplyPage() {
   const [toast, setToast] = useState("");
   if (!app) return null;
   if (!app.user) return <SignInCard what="auto-apply to jobs" />;
-  const { state, update, jobs, hasAccess, readyRoles } = app;
+  const { state, update, jobs, hasAccess, readyRoles, reloadApplications } = app;
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 2200); };
 
   const verified = jobs.filter((j) => j.v.level === "verified");
   const matched = verified.filter((j) => { const r = matchRoleToJob(j, state.roles); return r && r.cvName; });
-  const appliedJobs = jobs.filter((j) => state.applications.some((a) => a.jobId === j.id));
+  const appliedJobs = state.applications;
   const skipped = verified.length - matched.length;
 
-  const runAutoApply = () => {
+  const runAutoApply = async () => {
     const todo = [];
     verified.forEach((j) => {
       if (state.applications.some((a) => a.jobId === j.id)) return;
       const role = matchRoleToJob(j, state.roles);
-      if (role && role.cvName) todo.push({ jobId: j.id, roleId: role.id });
+      if (role && role.cvName) todo.push({ job: j, role });
     });
     if (!todo.length) return;
     setBusy(true);
-    setTimeout(() => {
-      update((s) => ({ applications: [...s.applications, ...todo.map((t) => ({ ...t, ts: Date.now() }))] }));
-      setBusy(false);
-      flash("Auto-applied to " + todo.length + " verified job(s) 🎉");
-    }, 1000);
+    for (const { job, role } of todo) {
+      // Real AI cover letter from the backend (Groq); falls back to the local writer.
+      let letter = "";
+      try {
+        const r = await api.coverLetter({
+          profile: { name: state.personal.name, email: state.personal.email, phone: state.personal.phone, location: state.personal.loc, linkedin: state.personal.linkedin },
+          role: { title: role.title, skills: role.skills },
+          job: { title: job.title, company: job.company, description: job.desc },
+          cvText: role.cvText,
+        });
+        letter = r.letter;
+      } catch {
+        letter = genLetter(job.company, job.title, role.title, state.personal.name);
+      }
+      try {
+        await api.addApplication({ jobId: job.id, company: job.company, title: job.title, roleTitle: role.title, cvName: role.cvName, status: "Applied", letter });
+      } catch {}
+    }
+    await reloadApplications();
+    setBusy(false);
+    flash("Auto-applied to " + todo.length + " verified job(s) 🎉");
   };
 
   const toggle = () => {
@@ -87,16 +104,17 @@ export default function ApplyPage() {
       {busy && <div className="card center"><b>Scanning verified jobs…</b><div className="small">Right CV, tailored letter, filled form for each</div></div>}
       {!busy && !appliedJobs.length && <div className="card center small">No applications yet. Turn auto-apply on above.</div>}
 
-      {appliedJobs.map((j) => {
-        const a = state.applications.find((x) => x.jobId === j.id);
-        const role = state.roles.find((r) => r.id === a.roleId) || {};
-        const isOpen = open === j.id;
+      {appliedJobs.map((a, i) => {
+        const key = a.id || i;
+        const isOpen = open === key;
+        const role = { title: a.roleTitle, cvName: a.cvName };
+        const job = { company: a.company, title: a.title, desc: "" };
         return (
-          <div className="card" key={j.id}>
+          <div className="card" key={key}>
             <div className="banner ok" style={{ marginBottom: 9 }}>
-              <span>✅</span><span>Applied to <b>{j.title}</b> at {j.company} — using <b>{role.cvName || "CV"}</b></span>
+              <span>✅</span><span>Applied to <b>{a.title}</b> at {a.company} — using <b>{a.cvName || "CV"}</b></span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", cursor: "pointer" }} onClick={() => setOpen(isOpen ? null : j.id)}>
+            <div style={{ display: "flex", justifyContent: "space-between", cursor: "pointer" }} onClick={() => setOpen(isOpen ? null : key)}>
               <span className="small">Tap to see what we submitted</span><span className="small">{isOpen ? "▲" : "▼"}</span>
             </div>
             <AnimatePresence>
@@ -104,15 +122,15 @@ export default function ApplyPage() {
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden" }}>
                   <div className="section-title" style={{ marginTop: 10 }}>Application form we filled</div>
                   <div className="card" style={{ margin: 0, boxShadow: "none" }}>
-                    {filledForm(state.personal, state.answers, role, j).map(([k, v], idx) => (
+                    {filledForm(state.personal, state.answers, role, job).map(([k, v], idx) => (
                       <div key={idx} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "8px 0", borderBottom: "1px dashed var(--line)", fontSize: 12.5 }}>
                         <span style={{ color: "var(--muted)", flex: "0 0 44%" }}>{k}</span>
                         <span style={{ fontWeight: 600, textAlign: "right" }}>{v}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="section-title">Tailored cover letter</div>
-                  <div className="out">{genLetter(j.company, j.title, role.title, state.personal.name)}</div>
+                  <div className="section-title">Cover letter (AI)</div>
+                  <div className="out">{a.letter}</div>
                 </motion.div>
               )}
             </AnimatePresence>

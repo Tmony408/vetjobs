@@ -15,8 +15,8 @@ const DEFAULTS = {
   autoOn: false,
   personal: { name: "", email: "", phone: "", loc: "", linkedin: "", portfolio: "" },
   answers: { exp: "", notice: "", auth: "", salary: "", relocate: "", heard: "VetJobs" },
-  roles: [],
-  applications: [], // [{jobId, roleId, ts}]
+  roles: [],         // server-backed: { id, title, skills, cvName, cvText, cvUrl }
+  applications: [],  // server-backed: { id, jobId, company, title, roleTitle, cvName, status, letter, appliedAt }
 };
 
 function load() {
@@ -28,7 +28,7 @@ function load() {
   return { ...DEFAULTS };
 }
 
-// Merge the server user record into local state (server is source of truth for profile).
+// Server is the source of truth once signed in.
 function mergeMe(s, me) {
   return {
     ...s,
@@ -42,6 +42,8 @@ function mergeMe(s, me) {
       portfolio: me.portfolio ?? s.personal.portfolio,
     },
     answers: { ...s.answers, ...(me.answers || {}) },
+    roles: me.roles || [],
+    applications: me.applications || [],
     subscribed: !!me.subscribed,
     bonusDays: me.bonusDays || 0,
     referrals: me.referrals || 0,
@@ -58,7 +60,6 @@ export function AppProvider({ children }) {
   const [ready, setReady] = useState(false);
   const syncTimer = useRef(null);
 
-  // hydrate from localStorage, then from the server if we have a token
   useEffect(() => {
     setState(load());
     (async () => {
@@ -75,13 +76,11 @@ export function AppProvider({ children }) {
     })();
   }, []);
 
-  // persist local state
   useEffect(() => {
     if (!ready) return;
     try { localStorage.setItem("vetjobs_state", JSON.stringify(state)); } catch {}
   }, [state, ready]);
 
-  // live jobs (public)
   useEffect(() => {
     let alive = true;
     fetch("/api/jobs")
@@ -91,7 +90,7 @@ export function AppProvider({ children }) {
     return () => { alive = false; };
   }, []);
 
-  // when signed in, sync profile + answers + account fields to the backend (debounced)
+  // debounced sync of profile + answers + account fields to the backend
   useEffect(() => {
     if (!ready || !user) return;
     clearTimeout(syncTimer.current);
@@ -116,6 +115,7 @@ export function AppProvider({ children }) {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
   }, []);
 
+  // ---- auth ----
   const login = async (email, password) => {
     const r = await api.login({ email, password });
     api.setToken(r.access_token);
@@ -126,11 +126,35 @@ export function AppProvider({ children }) {
     const r = await api.signup({ email, password, name });
     api.setToken(r.access_token);
     setUser(r.user);
-    setState((s) => ({ ...s, personal: { ...s.personal, name: name || "", email } }));
+    setState((s) => ({ ...s, personal: { ...s.personal, name: name || "", email }, roles: [], applications: [] }));
   };
   const logout = () => {
     api.clearToken();
     setUser(null);
+    setState((s) => ({ ...s, roles: [], applications: [] }));
+  };
+
+  // ---- roles (server-backed) ----
+  const addRole = async () => {
+    try {
+      const r = await api.addRole({ title: "", skills: "", cvName: "", cvText: "", cvUrl: "" });
+      setState((s) => ({ ...s, roles: [...s.roles, r] }));
+    } catch {}
+  };
+  const updateRoleLocal = (id, patch) =>
+    setState((s) => ({ ...s, roles: s.roles.map((r) => (r.id === id ? { ...r, ...patch } : r)) }));
+  const updateRole = async (id, patch) => {
+    updateRoleLocal(id, patch);
+    try { await api.updateRole(id, patch); } catch {}
+  };
+  const removeRole = async (id) => {
+    setState((s) => ({ ...s, roles: s.roles.filter((r) => r.id !== id) }));
+    try { await api.removeRole(id); } catch {}
+  };
+
+  // ---- applications (server-backed) ----
+  const reloadApplications = async () => {
+    try { const apps = await api.applications(); setState((s) => ({ ...s, applications: apps || [] })); } catch {}
   };
 
   const daysLeft = Math.max(0, 30 + state.bonusDays - Math.floor((Date.now() - state.trialStart) / DAY));
@@ -138,6 +162,7 @@ export function AppProvider({ children }) {
 
   const value = {
     state, update, user, login, signup, logout,
+    addRole, updateRole, updateRoleLocal, removeRole, reloadApplications,
     jobs, loadingJobs, ready, daysLeft, hasAccess,
     readyRoles: state.roles.filter((r) => r.title && r.cvName),
   };

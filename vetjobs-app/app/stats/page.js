@@ -26,12 +26,16 @@ export default function StatsPage() {
 
   const all = useMemo(() => {
     if (!app) return [];
-    const { state, jobs } = app;
-    const real = state.applications.map((a) => {
-      const j = jobs.find((x) => x.id === a.jobId) || {};
-      const r = state.roles.find((x) => x.id === a.roleId) || {};
-      return { company: j.company || "—", title: j.title || "—", role: r.title || "Role", cvName: r.cvName || "CV", ts: a.ts || Date.now(), status: "Applied", letter: genLetter(j.company, j.title, r.title, state.personal.name) };
-    });
+    const { state } = app;
+    const real = state.applications.map((a) => ({
+      company: a.company || "—",
+      title: a.title || "—",
+      role: a.roleTitle || "Role",
+      cvName: a.cvName || "CV",
+      ts: a.appliedAt ? new Date(a.appliedAt).getTime() : Date.now(),
+      status: a.status || "Applied",
+      letter: a.letter || genLetter(a.company, a.title, a.roleTitle, state.personal.name),
+    }));
     const demo = DEMO_HISTORY.map((d) => ({ company: d.company, title: d.title, role: d.role, cvName: d.cvName, ts: Date.now() - d.daysAgo * DAY, status: d.status, letter: genLetter(d.company, d.title, d.role, state.personal.name) }));
     return [...real, ...demo];
   }, [app]);

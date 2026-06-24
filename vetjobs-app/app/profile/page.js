@@ -31,14 +31,11 @@ export default function ProfilePage() {
   const [toast, setToast] = useState("");
   if (!app) return null;
   if (!app.user) return <SignInCard what="manage your profile and CVs" />;
-  const { state, update, daysLeft } = app;
+  const { state, update, daysLeft, addRole, updateRole, updateRoleLocal, removeRole } = app;
   const flash = (m) => { setToast(m); setTimeout(() => setToast(""), 2000); };
 
   const setPersonal = (k, v) => update((s) => ({ personal: { ...s.personal, [k]: v } }));
   const setAnswer = (k, v) => update((s) => ({ answers: { ...s.answers, [k]: v } }));
-  const addRole = () => update((s) => ({ roles: [...s.roles, { id: Date.now(), title: "", skills: "", cvName: "", cvText: "" }] }));
-  const delRole = (id) => update((s) => ({ roles: s.roles.filter((r) => r.id !== id) }));
-  const setRole = (id, k, v) => update((s) => ({ roles: s.roles.map((r) => (r.id === id ? { ...r, [k]: v } : r)) }));
 
   const onUpload = async (id, file) => {
     if (!file) return;
@@ -64,7 +61,7 @@ export default function ProfilePage() {
       });
       cvUrl = publicUrl;
     } catch {}
-    update((s) => ({ roles: s.roles.map((r) => (r.id === id ? { ...r, cvName: file.name, cvText, cvUrl } : r)) }));
+    updateRole(id, { cvName: file.name, cvText, cvUrl });
     flash(cvUrl ? "CV uploaded to storage ✓" : "CV saved ✓");
   };
 
@@ -121,11 +118,11 @@ export default function ProfilePage() {
       {state.roles.map((r) => (
         <div className="roleCard" key={r.id}>
           <div style={{ display: "flex", gap: 8 }}>
-            <input value={r.title} onChange={(e) => setRole(r.id, "title", e.target.value)} placeholder="Role e.g. Frontend Developer" style={{ fontWeight: 600 }} />
-            <button className="btn sm danger" onClick={() => delRole(r.id)}>✕</button>
+            <input value={r.title} onChange={(e) => updateRoleLocal(r.id, { title: e.target.value })} onBlur={(e) => updateRole(r.id, { title: e.target.value })} placeholder="Role e.g. Frontend Developer" style={{ fontWeight: 600 }} />
+            <button className="btn sm danger" onClick={() => removeRole(r.id)}>✕</button>
           </div>
           <label className="fld">Key skills (comma separated)</label>
-          <input value={r.skills} onChange={(e) => setRole(r.id, "skills", e.target.value)} placeholder="React, JavaScript, UI design" />
+          <input value={r.skills} onChange={(e) => updateRoleLocal(r.id, { skills: e.target.value })} onBlur={(e) => updateRole(r.id, { skills: e.target.value })} placeholder="React, JavaScript, UI design" />
           <label className="fld">CV for this role</label>
           {r.cvName ? (
             <div className="cvchip"><span>📄</span><span>{r.cvName}</span><span style={{ marginLeft: "auto", opacity: 0.8 }}>{r.cvText ? Math.round(r.cvText.length / 1000) + "k chars" : "attached"}</span></div>
