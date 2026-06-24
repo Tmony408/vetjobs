@@ -2,7 +2,7 @@
 // INTEGRATION POINT: replace keyword matching with embeddings, and genLetter
 // with a real LLM call over the full CV text + job description.
 
-const STOP = new Set(["the", "and", "for", "with", "developer", "engineer", "manager", "officer", "remote", "senior", "junior", "specialist"]);
+const STOP = new Set(["the", "and", "for", "with", "developer", "engineer", "manager", "officer", "remote", "senior", "junior", "specialist", "lead", "staff", "sr", "jr"]);
 
 export function roleKeywords(role) {
   return [...(role.title || "").split(/[\s,/]+/), ...(role.skills || "").split(/[\s,]+/)]
@@ -10,11 +10,41 @@ export function roleKeywords(role) {
     .filter((s) => s.length > 2 && !STOP.has(s));
 }
 
+// Job-family taxonomy: a role matches a job if they share a family — so a "Software
+// Engineer" role matches backend / frontend / full-stack / web developer jobs, a
+// "Product Designer" matches UI/UX / graphic designer, etc. — even without the exact title.
+const CATEGORIES = {
+  software: ["software", "developer", "dev", "engineer", "programmer", "frontend", "front-end", "front end", "backend", "back-end", "back end", "full stack", "full-stack", "fullstack", "web developer", "web dev", "react", "angular", "vue", "node", "javascript", "typescript", "python", "java", "golang", "php", "ruby", "mobile", "android", "ios", "flutter", "devops", "sre", "qa", "sdet", "cloud"],
+  design: ["designer", "ui", "ux", "graphic", "product design", "figma", "visual", "motion", "brand design"],
+  data: ["data analyst", "data scientist", "data engineer", "data", "analytics", "machine learning", "ml", "artificial intelligence", "ai", "business intelligence", "bi", "sql", "etl"],
+  product: ["product manager", "product owner", "program manager", "scrum", "product"],
+  marketing: ["marketing", "seo", "content", "social media", "growth", "brand", "community", "copywriter", "content writer"],
+  sales: ["sales", "business development", "account executive", "account manager", "bdr", "sdr", "partnerships"],
+  support: ["customer support", "customer success", "customer service", "support", "help desk", "technical support"],
+  finance: ["finance", "accountant", "accounting", "bookkeeper", "financial", "auditor", "payroll"],
+  writing: ["writer", "editor", "copywriter", "technical writer", "content writer", "journalist"],
+  people: ["recruiter", "human resources", "hr", "talent", "people ops", "people operations"],
+  operations: ["operations", "project manager", "logistics", "supply chain", "admin", "virtual assistant"],
+};
+
+function categoriesOf(text) {
+  const t = " " + (text || "").toLowerCase().replace(/[\/,]/g, " ").replace(/\s+/g, " ") + " ";
+  const hit = (k) => (k.length <= 3 ? t.includes(" " + k + " ") : t.includes(k)); // short tokens need word boundaries
+  const cats = new Set();
+  for (const [cat, kws] of Object.entries(CATEGORIES)) if (kws.some(hit)) cats.add(cat);
+  return cats;
+}
+
 export function matchRoleToJob(job, roles) {
+  const jobText = ((job.title || "") + " " + (job.desc || "") + " " + (job.text || "")).toLowerCase();
+  const jobCats = categoriesOf((job.title || "") + " " + (job.desc || ""));
   for (const r of roles) {
     if (!r.title) continue;
-    const hay = (job.title + " " + (job.desc || "") + " " + (job.text || "")).toLowerCase();
-    if (roleKeywords(r).some((k) => hay.includes(k))) return r;
+    // 1) same job family (e.g. "Software Engineer" role ↔ "Backend Developer" job)
+    const roleCats = categoriesOf((r.title || "") + " " + (r.skills || ""));
+    for (const c of roleCats) if (jobCats.has(c)) return r;
+    // 2) direct keyword / skill overlap as a fallback
+    if (roleKeywords(r).some((k) => jobText.includes(k))) return r;
   }
   return null;
 }
