@@ -82,7 +82,9 @@ export default function LoginPage() {
           <motion.button whileTap={{ scale: 0.98 }} className="btn brand" type="submit" disabled={busy}>
             {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
           </motion.button>
-          <button type="button" className="btn sec" style={{ marginTop: 10 }} onClick={google}>Continue with Google</button>
+          {/* Google sign-in is hidden until the Google provider is configured in Supabase.
+              Re-enable by restoring this button:
+              <button type="button" className="btn sec" style={{ marginTop: 10 }} onClick={google}>Continue with Google</button> */}
         </form>
       </div>
     </div>
