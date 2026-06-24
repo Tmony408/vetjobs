@@ -7,14 +7,18 @@ import { User } from '../entities/user.entity';
 export class UsersService {
   constructor(@InjectRepository(User) private readonly repo: Repository<User>) {}
 
-  // Create on first sight, otherwise return the existing user (simple emailed-based identity).
-  async upsertByEmail(data: Partial<User>): Promise<User> {
-    let user = await this.repo.findOne({ where: { email: data.email } });
+  // Ensure a profile row exists for this Supabase user (id = Supabase user id).
+  async ensure(id: string, email?: string, name?: string): Promise<User> {
+    let user = await this.repo.findOne({ where: { id } });
     if (!user) {
-      user = this.repo.create({ email: data.email, name: data.name || '', answers: {} });
+      user = this.repo.create({ id, email: email || '', name: name || '', answers: {} });
+      await this.repo.save(user);
+    } else if ((email && user.email !== email) || (name && !user.name)) {
+      user.email = email || user.email;
+      if (name && !user.name) user.name = name;
+      await this.repo.save(user);
     }
-    Object.assign(user, data);
-    return this.repo.save(user);
+    return user;
   }
 
   async get(id: string): Promise<User> {

@@ -1,7 +1,11 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
-// Returns the authenticated user's id from the JWT (set by JwtAuthGuard).
+// The authenticated user's id (= Supabase user id), set by JwtAuthGuard.
 export const CurrentUserId = createParamDecorator((_data: unknown, ctx: ExecutionContext): string => {
-  const req = ctx.switchToHttp().getRequest();
-  return req.user?.sub;
+  return ctx.switchToHttp().getRequest().user?.sub;
+});
+
+// The full authenticated user { sub, email, name }.
+export const CurrentUser = createParamDecorator((_data: unknown, ctx: ExecutionContext) => {
+  return ctx.switchToHttp().getRequest().user;
 });

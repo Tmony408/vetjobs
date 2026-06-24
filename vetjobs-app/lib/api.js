@@ -1,13 +1,20 @@
-// Tiny client for the VetJobs NestJS API.
+// Tiny client for the VetJobs NestJS API. Auth token comes from the Supabase session.
+import { supabase } from "@/lib/supabase";
+
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
-function token() {
-  try { return localStorage.getItem("vetjobs_token"); } catch { return null; }
+async function token() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token || null;
+  } catch {
+    return null;
+  }
 }
 
 async function req(path, { method = "GET", body, auth = true } = {}) {
   const headers = { "Content-Type": "application/json" };
-  if (auth) { const t = token(); if (t) headers.Authorization = `Bearer ${t}`; }
+  if (auth) { const t = await token(); if (t) headers.Authorization = `Bearer ${t}`; }
   const res = await fetch(BASE + path, {
     method,
     headers,
@@ -24,12 +31,6 @@ async function req(path, { method = "GET", body, auth = true } = {}) {
 
 export const api = {
   base: BASE,
-  token,
-  setToken: (t) => { try { localStorage.setItem("vetjobs_token", t); } catch {} },
-  clearToken: () => { try { localStorage.removeItem("vetjobs_token"); } catch {} },
-
-  signup: (b) => req("/auth/signup", { method: "POST", body: b, auth: false }),
-  login: (b) => req("/auth/login", { method: "POST", body: b, auth: false }),
 
   me: () => req("/me"),
   patchMe: (b) => req("/me", { method: "PATCH", body: b }),

@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 const DAY = 86400000;
 const AppCtx = createContext(null);
@@ -62,18 +63,23 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     setState(load());
-    (async () => {
-      if (api.token()) {
-        try {
-          const me = await api.me();
-          setUser({ id: me.id, email: me.email, name: me.name });
-          setState((s) => mergeMe(s, me));
-        } catch {
-          api.clearToken();
-        }
+    const applySession = async (session) => {
+      if (session?.user) {
+        const u = session.user;
+        setUser({ id: u.id, email: u.email, name: u.user_metadata?.full_name || u.user_metadata?.name || "" });
+        try { const me = await api.me(); setState((s) => mergeMe(s, me)); } catch {}
+      } else {
+        setUser(null);
+        setState((s) => ({ ...s, roles: [], applications: [] }));
       }
+    };
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      await applySession(data?.session);
       setReady(true);
     })();
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => { applySession(session); });
+    return () => { sub?.subscription?.unsubscribe?.(); };
   }, []);
 
   useEffect(() => {
@@ -115,21 +121,24 @@ export function AppProvider({ children }) {
     setState((s) => ({ ...s, ...(typeof patch === "function" ? patch(s) : patch) }));
   }, []);
 
-  // ---- auth ----
+  // ---- auth (Supabase) ----
   const login = async (email, password) => {
-    const r = await api.login({ email, password });
-    api.setToken(r.access_token);
-    setUser(r.user);
-    try { const me = await api.me(); setState((s) => mergeMe(s, me)); } catch {}
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    // onAuthStateChange hydrates the profile.
   };
   const signup = async (email, password, name) => {
-    const r = await api.signup({ email, password, name });
-    api.setToken(r.access_token);
-    setUser(r.user);
-    setState((s) => ({ ...s, personal: { ...s.personal, name: name || "", email }, roles: [], applications: [] }));
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+    if (error) throw new Error(error.message);
+    return { needsConfirmation: !data.session };
   };
-  const logout = () => {
-    api.clearToken();
+  const loginGoogle = async () => {
+    const redirectTo = typeof window !== "undefined" ? window.location.origin + "/jobs" : undefined;
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+    if (error) throw new Error(error.message);
+  };
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     setState((s) => ({ ...s, roles: [], applications: [] }));
   };
@@ -161,7 +170,7 @@ export function AppProvider({ children }) {
   const hasAccess = state.subscribed || daysLeft > 0;
 
   const value = {
-    state, update, user, login, signup, logout,
+    state, update, user, login, signup, logout, loginGoogle,
     addRole, updateRole, updateRoleLocal, removeRole, reloadApplications,
     jobs, loadingJobs, ready, daysLeft, hasAccess,
     readyRoles: state.roles.filter((r) => r.title && r.cvName),

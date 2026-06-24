@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
   // Already signed in? Don't show the login page — send them into the app.
@@ -19,18 +20,27 @@ export default function LoginPage() {
 
   const submit = async (e) => {
     e?.preventDefault();
-    setErr("");
+    setErr(""); setMsg("");
     if (!email || !password) { setErr("Email and password are required."); return; }
     setBusy(true);
     try {
-      if (mode === "signup") await app.signup(email.trim(), password, name.trim());
-      else await app.login(email.trim(), password);
+      if (mode === "signup") {
+        const r = await app.signup(email.trim(), password, name.trim());
+        if (r?.needsConfirmation) { setMsg("Almost there — check your email to confirm your account, then sign in."); return; }
+      } else {
+        await app.login(email.trim(), password);
+      }
       router.push("/jobs");
     } catch (e2) {
-      setErr(e2.message || "Something went wrong. Is the API running?");
+      setErr(e2.message || "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }
+  };
+
+  const google = async () => {
+    setErr("");
+    try { await app.loginGoogle(); } catch (e2) { setErr(e2.message || "Google sign-in failed."); }
   };
 
   return (
@@ -66,12 +76,13 @@ export default function LoginPage() {
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
 
           {err && <div className="banner bad" style={{ marginTop: 14 }}><span>⚠️</span><span>{err}</span></div>}
+          {msg && <div className="banner ok" style={{ marginTop: 14 }}><span>✅</span><span>{msg}</span></div>}
 
           <div style={{ height: 16 }} />
           <motion.button whileTap={{ scale: 0.98 }} className="btn brand" type="submit" disabled={busy}>
             {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
           </motion.button>
-          <button type="button" className="btn sec" style={{ marginTop: 10 }} disabled title="Coming soon">Continue with Google</button>
+          <button type="button" className="btn sec" style={{ marginTop: 10 }} onClick={google}>Continue with Google</button>
         </form>
       </div>
     </div>

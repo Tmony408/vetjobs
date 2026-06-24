@@ -1,18 +1,15 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 import { Role } from './role.entity';
 import { Application } from './application.entity';
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn('uuid')
+  // = the Supabase user id (auth is handled by Supabase; this row is the profile).
+  @PrimaryColumn('uuid')
   id: string;
 
   @Column({ unique: true })
   email: string;
-
-  // Not selected by default; explicitly requested only during login.
-  @Column({ nullable: true, select: false })
-  passwordHash: string;
 
   @Column({ default: '' })
   name: string;
