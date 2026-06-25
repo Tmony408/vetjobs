@@ -33,6 +33,33 @@ async function fetchJson(url, opts = {}) {
 }
 const titleCase = (s) => (s || "").charAt(0).toUpperCase() + (s || "").slice(1);
 
+/* ---------------- Nigeria eligibility ----------------
+ * A Nigerian can realistically take a job if it's IN Nigeria/Africa, or it's
+ * remote and open worldwide / unrestricted. We HIDE remote jobs that are locked
+ * to another region (US-only, UK-only, EU-only, etc.) — those are noise here.
+ */
+const AFRICA_WORDS = ["nigeria", "lagos", "abuja", "ibadan", "port harcourt", "kano", "benin city", "africa", "emea", "mea", "sub-saharan"];
+const OPEN_WORDS = ["worldwide", "anywhere", "global", "globally", "everywhere", "international", "remote, worldwide", "fully remote"];
+// If one of these names a region and there's no Africa/open signal, the job is
+// region-locked away from Nigeria → drop it.
+const RESTRICT_WORDS = [
+  "united states", "usa", "u.s.", "us only", "us-only", "us-based", "us based", "americas only",
+  "canada", "canadian", "united kingdom", "uk only", "uk-only", "uk-based", "uk based",
+  "europe only", "european union", "eu only", "eu-only", "eea", "schengen",
+  "australia", "australian", "new zealand", "india only", "philippines only", "latam only",
+  "singapore", "germany only", "france only", "ireland only",
+];
+function eligibleForNigeria(j) {
+  if (j.source === "seed") return true; // always show seeded demo rows (incl. the scams)
+  const s = `${j.loc || ""} ${j.type || ""}`.toLowerCase().trim();
+  if (!s || s === "—") return true;                       // unknown → keep
+  if (AFRICA_WORDS.some((w) => s.includes(w))) return true; // Nigeria/Africa/EMEA → keep
+  if (OPEN_WORDS.some((w) => s.includes(w))) return true;   // open worldwide → keep
+  if (RESTRICT_WORDS.some((w) => s.includes(w))) return false; // locked to another region → drop
+  if (s.includes("remote")) return true;                  // plain unrestricted "Remote" → keep
+  return false;                                           // names a specific non-African place → drop
+}
+
 /* ---------------- No-key public APIs ---------------- */
 async function fromArbeitnow() {
   const json = await fetchJson("https://www.arbeitnow.com/api/job-board-api");
@@ -149,7 +176,8 @@ export async function getJobs() {
 
   const merged = [...SEEDED, ...live]
     .filter((j) => j.days <= MAX_AGE_DAYS)
-    .map((j) => ({ ...j, v: verifyJob(j) }));
+    .filter(eligibleForNigeria)  // keep only jobs a Nigerian can actually take
+    .map((j) => ({ ...j, v: verifyJob(j), ngEligible: true }));
 
   const seen = new Set();
   const deduped = merged.filter((j) => {
