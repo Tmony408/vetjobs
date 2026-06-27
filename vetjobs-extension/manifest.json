@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "VetJobs Auto-Apply",
+  "version": "0.1.0",
+  "description": "Fill job application forms with your VetJobs profile and AI-written answers, review, then submit.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "action": {
+    "default_title": "VetJobs Auto-Apply",
+    "default_popup": "popup.html"
+  },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "icons": { "128": "icon128.png" }
+}

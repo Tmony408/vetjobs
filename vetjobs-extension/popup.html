@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body { width: 300px; margin: 0; font: 14px/1.4 system-ui, sans-serif; color: #0f172a; }
+    header { background: #15915a; color: #fff; padding: 14px; font-weight: 700; }
+    .pad { padding: 14px; }
+    input { width: 100%; box-sizing: border-box; padding: 9px; margin: 6px 0; border: 1px solid #cbd5e1; border-radius: 8px; }
+    button { width: 100%; padding: 10px; border: 0; border-radius: 9px; font-weight: 600; cursor: pointer; }
+    .brand { background: #15915a; color: #fff; }
+    .sec { background: #f1f5f9; color: #0f172a; margin-top: 8px; }
+    .muted { color: #64748b; font-size: 12px; }
+    .err { color: #dc2626; font-size: 13px; min-height: 16px; }
+    .hide { display: none; }
+    a { color: #15915a; }
+  </style>
+</head>
+<body>
+  <header>VetJobs Auto-Apply</header>
+
+  <div id="signedOut" class="pad">
+    <div class="muted">Sign in with your VetJobs account (email + password).</div>
+    <input id="email" type="email" placeholder="you@email.com" />
+    <input id="password" type="password" placeholder="Password" />
+    <button id="signIn" class="brand">Sign in</button>
+    <div id="err" class="err"></div>
+  </div>
+
+  <div id="signedIn" class="pad hide">
+    <div>Signed in as <b id="who"></b></div>
+    <button id="fill" class="brand" style="margin-top:10px">Fill this application page</button>
+    <button id="refresh" class="sec">Refresh my profile</button>
+    <button id="signOut" class="sec">Sign out</button>
+    <div id="err2" class="err"></div>
+    <details style="margin-top:10px">
+      <summary class="muted">Advanced</summary>
+      <input id="apiBase" placeholder="API base URL" />
+      <button id="saveCfg" class="sec">Save</button>
+    </details>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

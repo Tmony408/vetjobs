@@ -21,20 +21,27 @@ export default function ApplyPage() {
 
   // Apply to every non-scam job that matches a role (Verified + Caution) — not just "Verified",
   // since most live listings have no company-registry check and score as Caution.
+  // A CV makes the application stronger but is NOT required — we still have the
+  // profile, saved answers and a tailored letter, so we never skip a real match.
   const eligible = jobs.filter((j) => j.v.level !== "risk");
-  const matched = eligible.filter((j) => { const r = matchRoleToJob(j, state.roles); return r && r.cvName; });
+  const matched = eligible.filter((j) => matchRoleToJob(j, state.roles));
   const appliedJobs = state.applications;
   const skipped = eligible.length - matched.length;
 
   const runAutoApply = async () => {
     const todo = [];
     eligible.forEach((j) => {
-      if (state.applications.some((a) => a.jobId === j.id)) return;
+      if (state.applications.some((a) => a.jobId === j.id)) return; // already applied
       const role = matchRoleToJob(j, state.roles);
-      if (role && role.cvName) todo.push({ job: j, role });
+      if (role) todo.push({ job: j, role });
     });
-    if (!todo.length) return;
+    if (!todo.length) {
+      flash(matched.length ? "Already applied to all matching jobs ✅" : "No jobs match your roles yet — add or broaden a role in Profile");
+      return;
+    }
     setBusy(true);
+    let ok = 0;
+    let lastError = "";
     for (const { job, role } of todo) {
       // Real AI cover letter from the backend (Groq); falls back to the local writer.
       let letter = "";
@@ -50,17 +57,21 @@ export default function ApplyPage() {
         letter = genLetter(job.company, job.title, role.title, state.personal.name);
       }
       try {
-        await api.addApplication({ jobId: job.id, company: job.company, title: job.title, roleTitle: role.title, cvName: role.cvName, status: "Applied", letter });
-      } catch {}
+        await api.addApplication({ jobId: job.id, company: job.company, title: job.title, roleTitle: role.title, cvName: role.cvName || "", status: "Applied", letter });
+        ok++;
+      } catch (e) {
+        lastError = e?.message || "application failed";
+      }
     }
     await reloadApplications();
     setBusy(false);
-    flash("Auto-applied to " + todo.length + " verified job(s) 🎉");
+    if (ok) flash(`Auto-applied to ${ok} job${ok === 1 ? "" : "s"} 🎉`);
+    else flash("Couldn't save applications: " + (lastError || "server error") + ". Try again or sign out and back in.");
   };
 
   const toggle = () => {
     if (!state.autoOn) {
-      if (!readyRoles.length) { flash("Add a role with a CV in Profile first"); router.push("/profile"); return; }
+      if (!readyRoles.length) { flash("Add at least one role in Profile first"); router.push("/profile"); return; }
       if (!hasAccess) { setPaywall(true); return; }
       update({ autoOn: true });
       runAutoApply();

@@ -173,7 +173,9 @@ export function AppProvider({ children }) {
     state, update, user, login, signup, logout, loginGoogle,
     addRole, updateRole, updateRoleLocal, removeRole, reloadApplications,
     jobs, loadingJobs, ready, daysLeft, hasAccess,
-    readyRoles: state.roles.filter((r) => r.title && r.cvName),
+    // A role is "ready" to auto-apply with just a title. A CV strengthens it but
+    // isn't required — otherwise a failed CV upload silently blocks the whole service.
+    readyRoles: state.roles.filter((r) => r.title),
   };
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }

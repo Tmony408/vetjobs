@@ -11,6 +11,7 @@ import { ApplicationsModule } from './applications/applications.module';
 import { JobsModule } from './jobs/jobs.module';
 import { VerifyModule } from './verify/verify.module';
 import { CoverLetterModule } from './cover-letter/cover-letter.module';
+import { AnswerModule } from './answer/answer.module';
 import { MediaModule } from './media/media.module';
 
 @Module({
@@ -35,6 +36,7 @@ import { MediaModule } from './media/media.module';
     JobsModule,
     VerifyModule,
     CoverLetterModule,
+    AnswerModule,
     MediaModule,
   ],
 })
