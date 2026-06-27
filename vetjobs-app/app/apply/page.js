@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../providers";
@@ -14,6 +14,21 @@ export default function ApplyPage() {
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(null);
   const [toast, setToast] = useState("");
+  const runRef = useRef(null);
+  const autoRan = useRef(false);
+
+  // If auto-apply is already ON when the page loads (persisted from a prior visit)
+  // and nothing has been applied yet, run a pass automatically once jobs are loaded.
+  useEffect(() => {
+    if (!app?.user || !app?.ready) return;
+    if (autoRan.current) return;
+    const apps = app.state?.applications || [];
+    if (app.state?.autoOn && !apps.length && (app.jobs?.length || 0) > 0) {
+      autoRan.current = true;
+      runRef.current && runRef.current();
+    }
+  }, [app?.user, app?.ready, app?.jobs?.length, app?.state?.autoOn]);
+
   if (!app) return null;
   if (!app.user) return <SignInCard what="auto-apply to jobs" />;
   const { state, update, jobs, hasAccess, readyRoles, reloadApplications } = app;
@@ -68,6 +83,7 @@ export default function ApplyPage() {
     if (ok) flash(`Auto-applied to ${ok} job${ok === 1 ? "" : "s"} 🎉`);
     else flash("Couldn't save applications: " + (lastError || "server error") + ". Try again or sign out and back in.");
   };
+  runRef.current = runAutoApply;
 
   const toggle = () => {
     if (!state.autoOn) {
@@ -103,6 +119,10 @@ export default function ApplyPage() {
               <div><b>{skipped}</b><span>Skipped</span></div>
             </div>
             <div className="watching"><span className="dot" /> Live — new matching jobs get a full application within minutes.</div>
+            <button className="btn" style={{ marginTop: 12, background: "rgba(255,255,255,.18)", color: "#fff", border: "1px solid rgba(255,255,255,.4)" }}
+              onClick={runAutoApply} disabled={busy}>
+              {busy ? "Applying…" : `Apply now to ${matched.length} matching job${matched.length === 1 ? "" : "s"}`}
+            </button>
           </>
         )}
       </div>
